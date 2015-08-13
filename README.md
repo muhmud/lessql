@@ -8,3 +8,4 @@ Best used like this:
 ```
 lessql -SinFX
 ```
+![](https://github.com/muhmud/lessql/src/lessql.gif)
