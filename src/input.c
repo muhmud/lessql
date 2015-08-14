@@ -38,11 +38,11 @@ public int preventSplay = 0;
 public int useHeaders = -1;
 static int lineSize = -1;
 
-public char headerLine1[16384 * 2] = { 0 };
+public char headerLine1[16384 * 8] = { 0 };
 public char* pHeaderLine1 = NULL;
-public char headerLine2[16384 * 2] = { 0 };
+public char headerLine2[16384 * 8] = { 0 };
 public char* pHeaderLine2 = NULL;
-public char headerLine3[16384 * 2] = { 0 };
+public char headerLine3[16384 * 8] = { 0 };
 public char* pHeaderLine3 = NULL;
 
 /*
