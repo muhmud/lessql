@@ -140,7 +140,7 @@ public void put_header() {
 						putchr(' ');
 					}
 				}
-				putchr('\n');
+				//putchr('\n');
 			}
 
 			lower_left();
