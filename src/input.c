@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2012  Mark Nudelman
+ * Copyright (C) 1984-2016  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -34,15 +34,16 @@ extern int hilite_search;
 extern int size_linebuf;
 #endif
 
+// XXXXX
 public int preventSplay = 0;
 public int useHeaders = -1;
 static int lineSize = -1;
 
-public char headerLine1[16384 * 8] = { 0 };
+public char headerLine1[16384 * 2] = { 0 };
 public char* pHeaderLine1 = NULL;
-public char headerLine2[16384 * 8] = { 0 };
+public char headerLine2[16384 * 2] = { 0 };
 public char* pHeaderLine2 = NULL;
-public char headerLine3[16384 * 8] = { 0 };
+public char headerLine3[16384 * 2] = { 0 };
 public char* pHeaderLine3 = NULL;
 
 /*
@@ -62,10 +63,12 @@ forw_line(curr_pos)
 	int blankline;
 	int endline;
 	int backchars;
-	register int i;
+
+  // XXXXX
+  register int i;
 	char first = 0;
 	char* pHeaderLine = NULL;
-
+  
 get_forw_line:
 	if (curr_pos == NULL_POSITION)
 	{
@@ -74,6 +77,7 @@ get_forw_line:
 	}
 #if HILITE_SEARCH
 	if (hilite_search == OPT_ONPLUS || is_filtering() || status_col)
+	{
 		/*
 		 * If we are ignoring EOI (command F), only prepare
 		 * one line ahead, to avoid getting stuck waiting for
@@ -83,6 +87,8 @@ get_forw_line:
 		 */
 		prep_hilite(curr_pos, curr_pos + 3*size_linebuf, 
 				ignore_eoi ? 1 : -1);
+		curr_pos = next_unfiltered(curr_pos);
+	}
 #endif
 	if (ch_seek(curr_pos))
 	{
@@ -140,7 +146,8 @@ get_forw_line:
 	(void) pflushmbc();
 	pshift_all();
 
-	if (!pHeaderLine1) {
+  // XXXXX
+  if (!pHeaderLine1) {
 		 pHeaderLine1 = headerLine1;
 		 pHeaderLine = pHeaderLine1;
 	} else if (!pHeaderLine2) {
@@ -152,28 +159,27 @@ get_forw_line:
 	}
 
 	if (pHeaderLine) {
-		for (i = 1;;i++) {
-            c = ch_forw_get();
-            if (c != EOI) {
-                *pHeaderLine++ = c;
-            }
-            if (c == EOI || c == '\n') {
+		for (c = 1;;c++) {
+			if ((*pHeaderLine++ = ch_forw_get()) == '\n') {
 				break;
 			}
 		}
 
-		while (i-- > 0) {
+		while (c-- > 0) {
 			(void) ch_back_get();
 		}
 	}
-
+  
 	/*
 	 * Read the first character to display.
 	 */
 	c = ch_forw_get();
-	if (!first) {
-		first = c;
-	}
+
+  // XXXXX
+  if (!first) {
+    first = c;
+  }
+  
 	if (c == EOI)
 	{
 		null_line();
@@ -184,6 +190,7 @@ get_forw_line:
 	/*
 	 * Read each character in the line and append to the line buffer.
 	 */
+  // XXXXX
 	for (i = 0;;)
 	{
 		if (ABORT_SIGS())
@@ -191,9 +198,12 @@ get_forw_line:
 			null_line();
 			return (NULL_POSITION);
 		}
-		if (c == '\n' && preventSplay == 1 && i < lineSize - 1 && !blankline) {
+
+    // XXXXX
+    if (c == '\n' && preventSplay == 1 && i < lineSize - 1 && !blankline) {
 			c = ' ';
 		}
+    
 		if (c == '\n' || c == EOI)
 		{
 			/*
@@ -216,7 +226,10 @@ get_forw_line:
 		 * Append the char to the line and get the next char.
 		 */
 		backchars = pappend(c, ch_tell()-1);
-		++i;
+
+    // XXXXX
+    ++i;
+    
 		if (backchars > 0)
 		{
 			/*
@@ -283,7 +296,8 @@ get_forw_line:
 		new_pos = ch_tell();
 	}
 
-	if (useHeaders == -1) {
+  // XXXXX
+  if (useHeaders == -1) {
         if (first == '+') {
             preventSplay = 1;
         }
@@ -294,7 +308,7 @@ get_forw_line:
 			useHeaders = 0;
 		}
 	}
-
+  
 	return (new_pos);
 }
 
@@ -313,7 +327,9 @@ back_line(curr_pos)
 	int c;
 	int endline;
 	int backchars;
-	register int i;
+
+  // XXXXX
+  register int i;
 
 get_back_line:
 	if (curr_pos == NULL_POSITION || curr_pos <= ch_zero())
@@ -367,7 +383,8 @@ get_back_line:
 	/*
 	 * Scan backwards until we hit the beginning of the line.
 	 */
-	for (i =0;;++i)
+  // XXXXX
+	for (i = 0;; ++i)
 	{
 		if (ABORT_SIGS())
 		{
@@ -375,9 +392,12 @@ get_back_line:
 			return (NULL_POSITION);
 		}
 		c = ch_back_get();
-		if (c == '\n' && preventSplay && i < lineSize - 1) {
+
+    // XXXXX
+    if (c == '\n' && preventSplay && i < lineSize - 1) {
 			c = ' ';
 		}
+    
 		if (c == '\n')
 		{
 			/*
@@ -421,7 +441,9 @@ get_back_line:
 	begin_new_pos = new_pos;
 	(void) ch_seek(new_pos);
 
-	i = 0;
+  // XXXXX
+  i = 0;
+  
 	do
 	{
 		c = ch_forw_get();
@@ -431,9 +453,12 @@ get_back_line:
 			return (NULL_POSITION);
 		}
 		new_pos++;
-		if (c == '\n' && preventSplay && i < lineSize - 1) {
+
+    // XXXXX
+    if (c == '\n' && preventSplay && i < lineSize - 1) {
 			c = ' ';
 		}
+    
 		if (c == '\n')
 		{
 			backchars = pflushmbc();
@@ -446,7 +471,10 @@ get_back_line:
 			break;
 		}
 		backchars = pappend(c, ch_tell()-1);
-		++i;
+
+    // XXXXX
+    ++i;
+    
 		if (backchars > 0)
 		{
 			/*
@@ -508,19 +536,22 @@ set_attnpos(pos)
 		{
 			c = ch_forw_get();
 			if (c == EOI)
-				return;
-			if (c != '\n' && c != '\r')
 				break;
+			if (c == '\n' || c == '\r')
+			{
+				(void) ch_back_get();
+				break;
+			}
 			pos++;
+		}
+		end_attnpos = pos;
+		for (;;)
+		{
+			c = ch_back_get();
+			if (c == EOI || c == '\n' || c == '\r')
+				break;
+			pos--;
 		}
 	}
 	start_attnpos = pos;
-	for (;;)
-	{
-		c = ch_forw_get();
-		pos++;
-		if (c == EOI || c == '\n' || c == '\r')
-			break;
-	}
-	end_attnpos = pos;
 }

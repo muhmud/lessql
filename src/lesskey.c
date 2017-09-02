@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2012  Mark Nudelman
+ * Copyright (C) 1984-2016  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -104,6 +104,7 @@ struct cmdname cmdnames[] =
 	{ "display-flag",         A_DISP_OPTION },
 	{ "display-option",       A_DISP_OPTION },
 	{ "end",                  A_GOEND },
+	{ "end-scroll",           A_RRSHIFT },
 	{ "examine",              A_EXAMINE },
 	{ "filter",               A_FILTER },
 	{ "first-cmd",            A_FIRSTCMD },
@@ -120,6 +121,7 @@ struct cmdname cmdnames[] =
 	{ "forw-search",          A_F_SEARCH },
 	{ "forw-window",          A_F_WINDOW },
 	{ "goto-end",             A_GOEND },
+	{ "goto-end-buffered",    A_GOEND_BUF },
 	{ "goto-line",            A_GOLINE },
 	{ "goto-mark",            A_GOMARK },
 	{ "help",                 A_HELP },
@@ -129,6 +131,7 @@ struct cmdname cmdnames[] =
 	{ "next-file",            A_NEXT_FILE },
 	{ "next-tag",             A_NEXT_TAG },
 	{ "noaction",             A_NOACTION },
+	{ "no-scroll",            A_LLSHIFT },
 	{ "percent",              A_PERCENT },
 	{ "pipe",                 A_PIPE },
 	{ "prev-file",            A_PREV_FILE },
@@ -647,7 +650,7 @@ parse_cmdline(p)
 	do
 	{
 		s = tstr(&p, 1);
-		cmdlen += strlen(s);
+		cmdlen += (int) strlen(s);
 		if (cmdlen > MAX_CMDLEN)
 			error("command too long");
 		else

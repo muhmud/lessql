@@ -17,7 +17,7 @@ CPPFLAGS =
 EXEEXT = 
 O=o
 
-LIBS =  -ltinfo
+LIBS =  -lncursesw
 
 prefix = /usr/local
 exec_prefix = ${prefix}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2012  Mark Nudelman
+ * Copyright (C) 1984-2016  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -15,11 +15,13 @@
 
 #include "less.h"
 #include "position.h"
+#include "funcs.h"
 
 public int screen_trashed;
 public int squished;
 public int no_back_scroll = 0;
 public int forw_prompt;
+public int same_pos_bell = 1;
 
 extern int sigs;
 extern int top_scroll;
@@ -32,7 +34,13 @@ extern int ignore_eoi;
 extern int clear_bg;
 extern int final_attr;
 extern int oldbot;
+#if HILITE_SEARCH
+extern int size_linebuf;
+extern int hilite_search;
+extern int status_col;
+#endif
 
+// XXXXX
 extern int useHeaders;
 extern char* pUnderHeaderLine1;
 extern char* pUnderHeaderAttr1;
@@ -116,22 +124,23 @@ squish_check()
 	repaint();
 }
 
+// XXXXX
 void store_under_header_lines() {
-	if (useHeaders) {
-		POSITION pos = get_position(0);
-		pos = forw_line(pos);
-		char* line_buffer = get_line_buffer();
-		char* attr_buffer = get_attr_buffer();
-		int size = get_size_of_linebuf();
-		memcpy(pUnderHeaderLine1, line_buffer, size);
-		memcpy(pUnderHeaderAttr1, attr_buffer, size);
-		pos = forw_line(pos);
-		memcpy(pUnderHeaderLine2, line_buffer, size);
-		memcpy(pUnderHeaderAttr2, attr_buffer, size);
-		pos = forw_line(pos);
-		memcpy(pUnderHeaderLine3, line_buffer, size);
-		memcpy(pUnderHeaderAttr3, attr_buffer, size);
-	}
+        if (useHeaders) {
+                POSITION pos = get_position(0);
+                pos = forw_line(pos);
+                char* line_buffer = get_line_buffer();
+                char* attr_buffer = get_attr_buffer();
+                int size = get_size_of_linebuf();
+                memcpy(pUnderHeaderLine1, line_buffer, size);
+                memcpy(pUnderHeaderAttr1, attr_buffer, size);
+                pos = forw_line(pos);
+                memcpy(pUnderHeaderLine2, line_buffer, size);
+                memcpy(pUnderHeaderAttr2, attr_buffer, size);
+                pos = forw_line(pos);
+                memcpy(pUnderHeaderLine3, line_buffer, size);
+                memcpy(pUnderHeaderAttr3, attr_buffer, size);
+        }
 }
 
 /*
@@ -151,7 +160,6 @@ forw(n, pos, force, only_last, nblank)
 	int only_last;
 	int nblank;
 {
-	int eof = 0;
 	int nlines = 0;
 	int do_repaint;
 	static int first_time = 1;
@@ -169,6 +177,13 @@ forw(n, pos, force, only_last, nblank)
 	 */
 	do_repaint = (only_last && n > sc_height-1) || 
 		(forw_scroll >= 0 && n > forw_scroll && n != sc_height-1);
+
+#if HILITE_SEARCH
+	if (hilite_search == OPT_ONPLUS || is_filtering() || status_col) {
+		prep_hilite(pos, pos + 4*size_linebuf, ignore_eoi ? 1 : -1);
+		pos = next_unfiltered(pos);
+	}
+#endif
 
 	if (!do_repaint)
 	{
@@ -229,6 +244,9 @@ forw(n, pos, force, only_last, nblank)
 			 * Get the next line from the file.
 			 */
 			pos = forw_line(pos);
+#if HILITE_SEARCH
+			pos = next_unfiltered(pos);
+#endif
 			if (pos == NULL_POSITION)
 			{
 				/*
@@ -237,7 +255,6 @@ forw(n, pos, force, only_last, nblank)
 				 * Even if force is true, stop when the last
 				 * line in the file reaches the top of screen.
 				 */
-				eof = 1;
 				if (!force && position(TOP) != NULL_POSITION)
 					break;
 				if (!empty_lines(0, 0) && 
@@ -298,15 +315,16 @@ forw(n, pos, force, only_last, nblank)
 		forw_prompt = 1;
 	}
 
-	if (nlines == 0)
+	if (nlines == 0 && same_pos_bell)
 		eof_bell();
 	else if (do_repaint)
 		repaint();
 
-	if (squished != 1) {
-		store_under_header_lines();
-		put_header();
-	}
+  // XXXXX
+  if (squished != 1) {
+    store_under_header_lines();
+    put_header();
+  }
 
 	first_time = 0;
 	(void) currline(BOTTOM);
@@ -325,21 +343,30 @@ back(n, pos, force, only_last)
 	int nlines = 0;
 	int do_repaint;
 
-	int wasSquished = squished;
-
+  // XXXXX
+  int wasSquished = squished;
+  
 	squish_check();
-
 	do_repaint = (n > get_back_scroll() || (only_last && n > sc_height-1));
 
-	if (!do_repaint && wasSquished != 1) {
-		unput_header();
+  if (!do_repaint && wasSquished != 1) {
+    unput_header();
+  }
+  
+#if HILITE_SEARCH
+	if (hilite_search == OPT_ONPLUS || is_filtering() || status_col) {
+		prep_hilite((pos < 3*size_linebuf) ?  0 : pos - 3*size_linebuf, pos, -1);
 	}
-
+#endif
 	while (--n >= 0)
 	{
 		/*
 		 * Get the previous line of input.
 		 */
+#if HILITE_SEARCH
+		pos = prev_unfiltered(pos);
+#endif
+
 		pos = back_line(pos);
 		if (pos == NULL_POSITION)
 		{
@@ -353,8 +380,8 @@ back(n, pos, force, only_last)
 		 * Add the position of the previous line to the position table.
 		 * Display the line on the screen.
 		 */
-		nlines++;
 		add_back_pos(pos);
+		nlines++;
 		if (!do_repaint)
 		{
 			home();
@@ -363,15 +390,16 @@ back(n, pos, force, only_last)
 		}
 	}
 
-	if (nlines == 0)
+	if (nlines == 0 && same_pos_bell)
 		eof_bell();
 	else if (do_repaint)
 		repaint();
 	else if (!oldbot)
 		lower_left();
 
-	store_under_header_lines();
-	put_header();
+  // XXXXX
+  store_under_header_lines();
+  put_header();
 
 	(void) currline(BOTTOM);
 }
