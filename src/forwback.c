@@ -349,6 +349,7 @@ back(n, pos, force, only_last)
 	squish_check();
 	do_repaint = (n > get_back_scroll() || (only_last && n > sc_height-1));
 
+  // XXXXX
   if (!do_repaint && wasSquished != 1) {
     unput_header();
   }

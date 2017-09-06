@@ -160,7 +160,12 @@ get_forw_line:
 
 	if (pHeaderLine) {
 		for (c = 1;;c++) {
-			if ((*pHeaderLine++ = ch_forw_get()) == '\n') {
+      int ch = ch_forw_get();
+      if (ch == EOI) {
+        break;
+      }
+      
+			if ((*pHeaderLine++ = ch) == '\n') {
 				break;
 			}
 		}
